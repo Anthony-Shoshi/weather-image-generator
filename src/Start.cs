@@ -7,6 +7,8 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 
+namespace WeatherImageGenerator;
+
 public class Start
 {
     private readonly ILogger _logger;
