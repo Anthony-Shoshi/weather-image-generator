@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Net.Http;
 using Azure.Storage.Blobs;
+using WeatherImageGenerator.Helpers;
 
 namespace WeatherImageGenerator;
 
@@ -86,29 +87,77 @@ public class GenerateImage
             var imageJson = await resp.Content.ReadAsStringAsync();
 
             using var imageDoc = JsonDocument.Parse(imageJson);
-            
+
             if (!imageDoc.RootElement.TryGetProperty("urls", out var urls))
             {
                 _logger.LogError("Unsplash response missing 'urls'");
                 return;
             }
 
-            var imageUrl = urls.GetProperty("regular").GetString();
+            if (!urls.TryGetProperty("regular", out var regularUrlElem) || regularUrlElem.ValueKind != JsonValueKind.String)
+            {
+                _logger.LogError("Unsplash 'urls' missing 'regular' URL");
+                return;
+            }
+
+            var imageUrl = regularUrlElem.GetString();
             _logger.LogInformation($"Downloading image from {imageUrl}");
 
             // Download image bytes
             var imageBytes = await _httpClient.GetByteArrayAsync(imageUrl);
+
+
+            using var imageStream = new MemoryStream(imageBytes);
+
+            // Safely extract temperature (may be number or string) and weather description
+            string temperatureText = "Temperature: N/A";
+            if (TryGetPropertyIgnoreCase(stationElem, "temperature", out var tempElem))
+            {
+                if (tempElem.ValueKind == JsonValueKind.Number)
+                {
+                    temperatureText = $"Temperature: {tempElem.GetDouble():0.0}°C";
+                }
+                else if (tempElem.ValueKind == JsonValueKind.String && double.TryParse(tempElem.GetString(), out var tval))
+                {
+                    temperatureText = $"Temperature: {tval:0.0}°C";
+                }
+                else
+                {
+                    temperatureText = $"Temperature: {tempElem.ToString()}";
+                }
+            }
+
+            string weatherText = "Weather: N/A";
+            if (TryGetPropertyIgnoreCase(stationElem, "weatherdescription", out var weatherElem) || TryGetPropertyIgnoreCase(stationElem, "weatherDescription", out weatherElem))
+            {
+                if (weatherElem.ValueKind == JsonValueKind.String)
+                {
+                    weatherText = $"Weather: {weatherElem.GetString()}";
+                }
+                else
+                {
+                    weatherText = $"Weather: {weatherElem.ToString()}";
+                }
+            }
+
+            var texts = new[]
+            {
+                ($"Station: {stationName}", (10f, 10f), 24, "#FFFFFF"),
+                (temperatureText, (10f, 40f), 24, "#FFFFFF"),
+                (weatherText, (10f, 70f), 24, "#FFFFFF")
+            };
+
+            using var editedImageStream = ImageHelper.AddTextToImage(imageStream, texts);
 
             // Upload to Blob Storage
             var blobService = new BlobServiceClient(Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
             var container = blobService.GetBlobContainerClient("generated-images");
             await container.CreateIfNotExistsAsync();
 
-            var blobName = $"{processId}/{stationName.Replace(" ", "_")}.jpg";
+            var blobName = $"{processId}/{stationName.Replace(" ", "_")}.png";
             var blobClient = container.GetBlobClient(blobName);
 
-            await using var stream = new MemoryStream(imageBytes);
-            await blobClient.UploadAsync(stream, overwrite: true);
+            await blobClient.UploadAsync(editedImageStream, overwrite: true);
 
             _logger.LogInformation($"Uploaded {blobName} to 'generated-images' container.");
         }
