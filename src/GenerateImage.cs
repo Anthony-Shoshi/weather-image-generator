@@ -79,10 +79,20 @@ public class GenerateImage
 
             var requestUrl = "https://api.unsplash.com/photos/random?query=winter%20forest";
             var req = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+            // Authorization as Client-ID is required for the Unsplash public API
             req.Headers.Add("Authorization", $"Client-ID {accessKey}");
+            // Helpful headers for more informative responses from the API
+            req.Headers.Add("Accept-Version", "v1");
+            req.Headers.Add("User-Agent", "WeatherImageGenerator/1.0");
 
             var resp = await _httpClient.SendAsync(req);
-            resp.EnsureSuccessStatusCode();
+            if (!resp.IsSuccessStatusCode)
+            {
+                // Read body to get a clearer explanation (rate limit, invalid key, etc.)
+                var errBody = await resp.Content.ReadAsStringAsync();
+                _logger.LogError("Unsplash API returned {StatusCode}: {Body}", resp.StatusCode, errBody);
+                return;
+            }
 
             var imageJson = await resp.Content.ReadAsStringAsync();
 
@@ -103,10 +113,19 @@ public class GenerateImage
             var imageUrl = regularUrlElem.GetString();
             _logger.LogInformation($"Downloading image from {imageUrl}");
 
-            // Download image bytes
-            var imageBytes = await _httpClient.GetByteArrayAsync(imageUrl);
+            // Download image bytes defensively so we can log non-success responses (403, etc.)
+            var imgReq = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+            // Some hosts require a User-Agent; reuse the same.
+            imgReq.Headers.Add("User-Agent", "WeatherImageGenerator/1.0");
+            var imgResp = await _httpClient.SendAsync(imgReq);
+            if (!imgResp.IsSuccessStatusCode)
+            {
+                var errBody = await imgResp.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to download image {Url} returned {StatusCode}: {Body}", imageUrl, imgResp.StatusCode, errBody);
+                return;
+            }
 
-
+            var imageBytes = await imgResp.Content.ReadAsByteArrayAsync();
             using var imageStream = new MemoryStream(imageBytes);
 
             // Safely extract temperature (may be number or string) and weather description

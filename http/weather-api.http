@@ -1,0 +1,7 @@
+# Start a new image generation job
+GET http://localhost:7071/api/Start
+
+###
+
+# Get list of generated images for a process ID
+GET http://localhost:7071/api/GetResults?processId=ca49ec54-d95a-43dc-b453-e8cf76aab6d4
