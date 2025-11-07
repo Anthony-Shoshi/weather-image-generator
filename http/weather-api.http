@@ -4,4 +4,9 @@ GET https://assignmentweatherimagefa2025.azurewebsites.net/api/start
 ###
 
 # Get list of generated images for a process ID
-GET https://assignmentweatherimagefa2025.azurewebsites.net/api/getresults?processId={processId}>
+GET https://assignmentweatherimagefa2025.azurewebsites.net/api/getresults?processId={processId}
+
+###
+
+# Check the status of an image generation job
+GET https://assignmentweatherimagefa2025.azurewebsites.net/api/getstatus?processId={processId}

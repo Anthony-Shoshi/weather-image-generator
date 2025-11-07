@@ -45,7 +45,7 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
-After deployment completed successfully, add **UNSPLASH_ACCESS_KEY** from Azure portal. We are putting this manually for security reason. You will get this access key from https://unsplash.com/developers
+After deployment completed successfully, add **UNSPLASH_ACCESS_KEY** from Azure portal inside azure function app settings. We are putting this manually for security reason. You will get this access key from https://unsplash.com/developers
 
 ## 🔍 Verify Deployment
 After deployment completes, check your Function App in the Azure Portal:
