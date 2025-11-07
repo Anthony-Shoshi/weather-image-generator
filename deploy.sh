@@ -1,32 +1,49 @@
 #!/bin/bash
+set -e
 
 # === CONFIGURATION ===
+RESOURCE_GROUP_NAME="AssignmentWeatherAppRG"
+LOCATION="Spain Central"
+BICEP_FILE="./bicep/main.bicep"
 FUNCTION_PROJECT_PATH="./src"
-FUNCTION_APP_NAME="weatherimagefa2025"  # your Azure Function App name
-RESOURCE_GROUP_NAME="WeatherAppRG"      # your Azure Resource Group
 
-# Optional: override from CLI arguments
-if [ ! -z "$1" ]; then FUNCTION_PROJECT_PATH="$1"; fi
-if [ ! -z "$2" ]; then FUNCTION_APP_NAME="$2"; fi
-if [ ! -z "$3" ]; then RESOURCE_GROUP_NAME="$3"; fi
+# Allow optional args for overrides
+if [ ! -z "$1" ]; then RESOURCE_GROUP_NAME="$1"; fi
+if [ ! -z "$2" ]; then LOCATION="$2"; fi
 
-echo "Publishing Azure Function from: $FUNCTION_PROJECT_PATH"
+echo "Deploying Azure infrastructure using Bicep..."
+az group create --name "$RESOURCE_GROUP_NAME" --location "$LOCATION"
 
-# Check if host.json exists
+# Deploy the Bicep template
+az deployment group create \
+  --resource-group "$RESOURCE_GROUP_NAME" \
+  --template-file "$BICEP_FILE" \
+  --output json \
+  --query "properties.outputs" > deployment_outputs.json
+
+echo "Infrastructure deployed successfully!"
+
+# Extract values from outputs
+FUNCTION_APP_NAME=$(jq -r '.functionAppName.value' deployment_outputs.json)
+STORAGE_ACCOUNT_NAME=$(jq -r '.storageAccountName.value' deployment_outputs.json)
+
+echo "Function App: $FUNCTION_APP_NAME"
+echo "Storage Account: $STORAGE_ACCOUNT_NAME"
+
+# === FUNCTION DEPLOYMENT ===
+echo "📦 Publishing Azure Function from: $FUNCTION_PROJECT_PATH"
+
 if [ ! -f "$FUNCTION_PROJECT_PATH/host.json" ]; then
     echo "Error: host.json not found in $FUNCTION_PROJECT_PATH"
     exit 1
 fi
 
-# Navigate to the function project
-cd "$FUNCTION_PROJECT_PATH" || { echo "Failed to change directory."; exit 1; }
+cd "$FUNCTION_PROJECT_PATH"
 
-# Build and publish function
-echo "🚀 Building and publishing..."
+echo "Building function..."
 dotnet publish -c Release -o ./publish
 
-# Deploy using Azure Functions Core Tools
 echo "Deploying to Azure Function App: $FUNCTION_APP_NAME"
-func azure functionapp publish "$FUNCTION_APP_NAME" --csharp --force
+func azure functionapp publish "$FUNCTION_APP_NAME" --dotnet-isolated --force
 
 echo "Deployment complete!"

@@ -1,9 +1,9 @@
 param location string = resourceGroup().location
 
-var prefix = uniqueString('weatherimg2025', location, resourceGroup().name, subscription().subscriptionId)
-var serverFarmName = '${prefix}-sf'
-var functionAppName = 'weatherimagefa2025'
-var storageAccountName = 'weatherimgstorage2025'
+var prefix = 'assignmentweatherimg2025'
+var serverFarmName = substring('${prefix}-sf', 0, 16)
+var functionAppName = 'assignmentweatherimagefa2025'
+var storageAccountName = substring('${prefix}stg', 0, 24) // ensure under 24 chars
 
 // Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
@@ -20,21 +20,33 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
+// Queue service (parent for queues)
+resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2023-01-01' = {
+  name: 'default'
+  parent: storageAccount
+}
+
 // Queues
 resource startQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-01-01' = {
-  parent: storageAccount
-  name: 'default/start-queue'
+  parent: queueService
+  name: 'start-queue'
 }
 
 resource imageQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-01-01' = {
+  parent: queueService
+  name: 'image-queue'
+}
+
+// Blob service (parent for containers)
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  name: 'default'
   parent: storageAccount
-  name: 'default/image-queue'
 }
 
 // Blob container
 resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  parent: storageAccount
-  name: 'default/generated-images'
+  parent: blobService
+  name: 'generated-images'
   properties: {
     publicAccess: 'None'
   }
@@ -45,11 +57,13 @@ resource serverFarm 'Microsoft.Web/serverfarms@2021-03-01' = {
   name: serverFarmName
   location: location
   sku: {
-    tier: 'Consumption'
+    tier: 'Dynamic'
     name: 'Y1'
   }
-  kind: 'elastic'
+  kind: 'functionapp'
 }
+
+var storageKey = listKeys(storageAccount.id, '2023-01-01').keys[0].value
 
 // Function App
 resource functionApp 'Microsoft.Web/sites@2021-03-01' = {
@@ -77,12 +91,8 @@ resource functionApp 'Microsoft.Web/sites@2021-03-01' = {
           value: 'dotnet-isolated'
         }
         {
-          name: 'WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED'
-          value: '1'
-        }
-        {
           name: 'AzureWebJobsStorage'
-          value: storageAccount.listKeys().keys[0].value
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageKey};EndpointSuffix=${environment().suffixes.storage}'
         }
         {
           name: 'START_QUEUE_NAME'
@@ -98,7 +108,7 @@ resource functionApp 'Microsoft.Web/sites@2021-03-01' = {
         }
         {
           name: 'UNSPLASH_ACCESS_KEY'
-          value: '' // fill this after deployment
+          value: '' // fill manually later for security reason
         }
       ]
     }

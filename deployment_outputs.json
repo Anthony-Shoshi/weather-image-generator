@@ -1,0 +1,22 @@
+{
+  "blobContainerName": {
+    "type": "String",
+    "value": "generated-images"
+  },
+  "functionAppName": {
+    "type": "String",
+    "value": "assignmentweatherimagefa2025"
+  },
+  "imageQueueName": {
+    "type": "String",
+    "value": "image-queue"
+  },
+  "startQueueName": {
+    "type": "String",
+    "value": "start-queue"
+  },
+  "storageAccountName": {
+    "type": "String",
+    "value": "assignmentweatherimg2025"
+  }
+}
