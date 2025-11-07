@@ -42,11 +42,11 @@ public class GetResults
         var results = new List<string>();
         await foreach (var blob in container.GetBlobsAsync(prefix: $"{processId}/"))
         {
-            // Option 1: public URL
+            // public URL
             // var uri = $"{container.Uri}/{blob.Name}";
             // results.Add(uri);
 
-            // Option 2: SAS URL (optional, more secure)
+            // SAS URL
             var blobClient = container.GetBlobClient(blob.Name);
             var sasBuilder = new BlobSasBuilder
             {
