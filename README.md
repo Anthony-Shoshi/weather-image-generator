@@ -60,3 +60,6 @@ After deployment completes, check your Function App in the Azure Portal:
 
 ## 🌦️ API Testing
 You can test your deployed API endpoints from **http/weather-api.http** file.
+
+## Github Actions for CI/CD
+Github action configuration added to Build and deploy the code automatically when code push to master branch. But make sure you have added **AZURE_FUNCTIONAPP_PUBLISH_PROFILE** in secret and value will be publish profile file value. You will get this file from Azure Portal.
