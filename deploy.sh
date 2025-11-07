@@ -31,7 +31,7 @@ echo "Function App: $FUNCTION_APP_NAME"
 echo "Storage Account: $STORAGE_ACCOUNT_NAME"
 
 # === FUNCTION DEPLOYMENT ===
-echo "📦 Publishing Azure Function from: $FUNCTION_PROJECT_PATH"
+echo "Publishing Azure Function from: $FUNCTION_PROJECT_PATH"
 
 if [ ! -f "$FUNCTION_PROJECT_PATH/host.json" ]; then
     echo "Error: host.json not found in $FUNCTION_PROJECT_PATH"
