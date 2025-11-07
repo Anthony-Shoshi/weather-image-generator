@@ -1,0 +1,15 @@
+# Ignore Azurite-generated files and folders
+# Azurite persistent DB files (json files created by Azurite)
+__azurite_db_blob__*
+__azurite_db_blob_extent__*
+__azurite_db_queue__*
+__azurite_db_queue_extent__*
+__azurite_db_table__*
+
+# Azurite created storage folders
+__blobstorage__/
+__queuestorage__/
+
+# Common Azure/Azurite local files (optional, uncomment if you want to ignore)
+# local.settings.json
+# host.json
