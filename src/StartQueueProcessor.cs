@@ -10,6 +10,7 @@ using Azure.Storage.Queues;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using WeatherImageGenerator.Helpers;
 
 namespace WeatherImageGenerator;
 
@@ -79,6 +80,10 @@ public class StartQueueProcessor
 
             // Fan out up to 50 stations
             int enqueued = 0;
+
+            // Update status to processing
+            await StatusHelper.UpdateStatusAsync(processId, "processing", 0, 50);
+
             foreach (var station in stationsElem.EnumerateArray().Take(50))
             {
                 // create job payload with processId and station JSON

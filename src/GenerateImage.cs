@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using Azure.Storage.Blobs;
 using WeatherImageGenerator.Helpers;
+using Azure;
+using Azure.Data.Tables;
 
 namespace WeatherImageGenerator;
 
@@ -179,6 +181,26 @@ public class GenerateImage
             await blobClient.UploadAsync(editedImageStream, overwrite: true);
 
             _logger.LogInformation($"Uploaded {blobName} to 'generated-images' container.");
+
+            // <-- Add status increment code here
+            var table = new TableServiceClient(Environment.GetEnvironmentVariable("AzureWebJobsStorage"))
+                .GetTableClient("ProcessStatus");
+            await table.CreateIfNotExistsAsync();
+
+            try
+            {
+                var entity = await table.GetEntityAsync<TableEntity>("Process", processId);
+                int completed = entity.Value.GetInt32("Completed") ?? 0;
+                int total = entity.Value.GetInt32("Total") ?? 50;
+                entity.Value["Completed"] = completed + 1;
+                entity.Value["Status"] = (completed + 1 == total) ? "completed" : "processing";
+                entity.Value["LastUpdated"] = DateTime.UtcNow;
+                await table.UpsertEntityAsync(entity.Value);
+            }
+            catch
+            {
+                await StatusHelper.UpdateStatusAsync(processId, "processing", 1, 50);
+            }
         }
         catch (Exception ex)
         {

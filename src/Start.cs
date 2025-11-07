@@ -6,6 +6,7 @@ using Azure.Storage.Queues;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using WeatherImageGenerator.Helpers;
 
 namespace WeatherImageGenerator;
 
@@ -20,7 +21,7 @@ public class Start
 
     [Function("Start")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", "get")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
     {
         var processId = Guid.NewGuid().ToString();
         var messageBody = JsonSerializer.Serialize(new { processId });
@@ -32,6 +33,8 @@ public class Start
         var queueClient = new QueueClient(storageConnection, queueName);
         await queueClient.CreateIfNotExistsAsync();
         await queueClient.SendMessageAsync(Convert.ToBase64String(Encoding.UTF8.GetBytes(messageBody)));
+
+        await StatusHelper.UpdateStatusAsync(processId, "queued", 0, 50);
 
         _logger.LogInformation($"Queued new process {processId}");
 
