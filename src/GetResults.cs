@@ -43,20 +43,22 @@ public class GetResults
         await foreach (var blob in container.GetBlobsAsync(prefix: $"{processId}/"))
         {
             // Option 1: public URL
-            var uri = $"{container.Uri}/{blob.Name}";
-            results.Add(uri);
+            // var uri = $"{container.Uri}/{blob.Name}";
+            // results.Add(uri);
 
             // Option 2: SAS URL (optional, more secure)
-            /*
             var blobClient = container.GetBlobClient(blob.Name);
-            var sasBuilder = new BlobSasBuilder(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(1))
+            var sasBuilder = new BlobSasBuilder
             {
                 BlobContainerName = container.Name,
-                BlobName = blob.Name
+                BlobName = blob.Name,
+                Resource = "b",
+                ExpiresOn = DateTimeOffset.UtcNow.AddHours(1)
             };
+            sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
             var sasUri = blobClient.GenerateSasUri(sasBuilder);
             results.Add(sasUri.ToString());
-            */
         }
 
         response.StatusCode = HttpStatusCode.OK;
